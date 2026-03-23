@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sólido – USSD</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: #111;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  .phone {
+    width: 300px;
+    background: #000;
+    border-radius: 32px;
+    border: 2px solid #333;
+    padding: 14px 12px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .notch-bar { display:flex; justify-content:center; padding-bottom:4px; }
+  .notch { width:70px; height:5px; background:#222; border-radius:3px; }
+
+  .screen {
+    background: #fff;
+    border-radius: 6px;
+    overflow: hidden;
+    min-height: 360px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .screen-bar {
+    background: #000;
+    color: #fff;
+    font-size: 10px;
+    padding: 4px 10px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .ussd-body {
+    flex: 1;
+    padding: 12px 10px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  #screenText {
+    font-size: 12.5px;
+    color: #000;
+    line-height: 1.75;
+    white-space: pre-line;
+    flex: 1;
+    animation: fadeIn .2s ease;
+  }
+
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+  .input-row {
+    display: flex;
+    gap: 4px;
+    border-top: 1px solid #ccc;
+    padding-top: 8px;
+  }
+  .ussd-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    background: transparent;
+    color: #000;
+  }
+  .ussd-input::placeholder { color:#aaa; font-size:11px; }
+  .send-btn {
+    background: #000;
+    color: #fff;
+    border: none;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    padding: 4px 9px;
+    border-radius: 3px;
+    cursor: pointer;
+    letter-spacing: 1px;
+  }
+  .send-btn:active { background:#333; }
+
+  .nav-row { display:flex; justify-content:space-between; padding:0 4px; }
+  .nav-btn {
+    background: #111;
+    border: 1px solid #333;
+    color: #aaa;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    padding: 5px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    letter-spacing: 1px;
+  }
+  .nav-btn:hover { border-color:#666; color:#fff; }
+  .nav-btn:active { background:#222; }
+
+  .keypad {
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    gap: 5px;
+    padding: 0 4px;
+  }
+  .key {
+    background: #0e0e0e;
+    border: 1px solid #222;
+    color: #ddd;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 15px;
+    padding: 9px 0;
+    border-radius: 8px;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    transition: background .1s;
+  }
+  .key sub { font-size:7px; color:#555; display:block; line-height:1; }
+  .key:active { background:#2a2a2a; }
+  .key.del { color:#888; font-size:13px; }
+  .key.ok  { color:#fff; background:#1a1a1a; border-color:#444; }
+
+  .home-bar-row { display:flex; justify-content:center; padding-top:4px; }
+  .home-bar { width:60px; height:3px; background:#222; border-radius:2px; }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="notch-bar"><div class="notch"></div></div>
+
+  <div class="screen">
+    <div class="screen-bar">
+      <span>MTC  MZ</span>
+      <span>*150#</span>
+      <span>▌▌▌▌</span>
+    </div>
+    <div class="ussd-body">
+      <div id="screenText"></div>
+      <div class="input-row">
+        <input class="ussd-input" id="ussdInput" type="tel" placeholder="opcao..." maxlength="20" autocomplete="off"/>
+        <button class="send-btn" onclick="handleSend()">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-row">
+    <button class="nav-btn" onclick="handleBack()">◄ VOLTAR</button>
+    <button class="nav-btn" onclick="handleExit()">SAIR ✕</button>
+  </div>
+
+  <div class="keypad">
+    <div class="key" onclick="pressKey('1')">1</div>
+    <div class="key" onclick="pressKey('2')">2<sub>ABC</sub></div>
+    <div class="key" onclick="pressKey('3')">3<sub>DEF</sub></div>
+    <div class="key" onclick="pressKey('4')">4<sub>GHI</sub></div>
+    <div class="key" onclick="pressKey('5')">5<sub>JKL</sub></div>
+    <div class="key" onclick="pressKey('6')">6<sub>MNO</sub></div>
+    <div class="key" onclick="pressKey('7')">7<sub>PQRS</sub></div>
+    <div class="key" onclick="pressKey('8')">8<sub>TUV</sub></div>
+    <div class="key" onclick="pressKey('9')">9<sub>WXYZ</sub></div>
+    <div class="key del" onclick="pressKey('del')">⌫</div>
+    <div class="key" onclick="pressKey('0')">0</div>
+    <div class="key ok" onclick="handleSend()">OK</div>
+  </div>
+
+  <div class="home-bar-row"><div class="home-bar"></div></div>
+</div>
+
+<script>
+let state = 'welcome';
+let pinAttempt = '';
+
+const S = {
+  welcome:
+`Bem-Vindo ao Solido.
+
+Banco Solido, S.A.
+Servicos Digitais USSD
+
+Prima OK para continuar`,
+
+  pin: () =>
+`Autenticacao
+
+Introduza o seu PIN:
+
+${'*'.repeat(pinAttempt.length)}`,
+
+  pinErro:
+`PIN incorrecto.
+
+Tente novamente.
+
+0 - Voltar`,
+
+  menu:
+`MENU PRINCIPAL
+
+1 - Saldo
+2 - Creditos
+3 - Recargas
+4 - Contas e Cartoes
+5 - Pagamentos
+6 - Transferencias
+7 - Conta
+8 - Sair`,
+
+  saldo:
+`SALDO
+
+Conta Principal
+------------------
+45.320,00 MZN
+
+NIB: 001 234 567 890
+
+0 - Voltar`,
+
+  creditos:
+`CREDITOS
+
+Credito Pessoal: ACTIVO
+Em divida: 12.000 MZN
+Prestacao: 1.500 MZN
+Vencimento: 05/04/2025
+
+1 - Solicitar Credito
+2 - Detalhes
+0 - Voltar`,
+
+  recargas:
+`RECARGAS
+
+1 - Vodacom
+2 - Tmcel
+3 - Movitel
+0 - Voltar`,
+
+  rec_vodacom:
+`VODACOM
+
+1 - 50 MZN
+2 - 100 MZN
+3 - 200 MZN
+4 - 500 MZN
+0 - Voltar`,
+
+  rec_tmcel:
+`TMCEL
+
+1 - 50 MZN
+2 - 100 MZN
+3 - 200 MZN
+4 - 500 MZN
+0 - Voltar`,
+
+  rec_movitel:
+`MOVITEL
+
+1 - 50 MZN
+2 - 100 MZN
+3 - 200 MZN
+4 - 500 MZN
+0 - Voltar`,
+
+  rec_ok:
+`Recarga enviada
+com sucesso.
+
+Obrigado por usar
+o Solido Bank.
+
+0 - Menu Principal`,
+
+  contas:
+`CONTAS E CARTOES
+
+1 - Ver Contas
+2 - Ver Cartoes
+3 - Bloquear Cartao
+4 - Extracto (ult. 5)
+0 - Voltar`,
+
+  pagamentos:
+`PAGAMENTOS
+
+1 - Por Entidade/Ref.
+2 - Servicos
+0 - Voltar`,
+
+  pag_entref:
+`PAGAMENTO
+
+Entidade: [_______]
+Referencia: [______]
+Valor (MZN): [_____]
+
+Introduza a entidade
+e prima OK:`,
+
+  pag_servicos:
+`SERVICOS
+
+1 - Internet TvCabo
+2 - Starlink
+3 - Zap
+4 - DSTV
+0 - Voltar`,
+
+  pag_tvcabo:
+`INTERNET TVCABO
+
+Nr. Cliente: [_____]
+
+1 - Pagar Factura
+2 - Ver Debito
+0 - Voltar`,
+
+  pag_starlink:
+`STARLINK
+
+Nr. Cliente: [_____]
+
+1 - Pagar Factura
+2 - Ver Debito
+0 - Voltar`,
+
+  pag_zap:
+`ZAP
+
+Nr. Assinante: [___]
+
+1 - Pagar Factura
+2 - Ver Debito
+0 - Voltar`,
+
+  pag_dstv:
+`DSTV
+
+Nr. Assinante: [___]
+
+1 - Pagar Factura
+2 - Ver Debito
+0 - Voltar`,
+
+  pag_ok:
+`Pagamento enviado
+com sucesso.
+
+Obrigado por usar
+o Solido Bank.
+
+0 - Menu Principal`,
+
+  transferencias:
+`TRANSFERENCIAS
+
+1 - Interna
+2 - Interbancaria
+3 - Carteira Movel
+4 - Historico
+0 - Voltar`,
+
+  conta:
+`MINHA CONTA
+
+Nome: Ana Sofia Macuacua
+NIF: 401234567890M
+Agencia: Maputo Centro
+
+1 - Alterar PIN
+2 - Alertas SMS
+3 - Limites
+0 - Voltar`,
+
+  goodbye:
+`Obrigado por utilizar
+os servicos do
+
+    SOLIDO BANK
+
+Sessao encerrada
+com seguranca.
+
+Bom dia!`,
+
+  genOk:
+`Operacao concluida
+com sucesso.
+
+0 - Menu Principal`,
+
+  genWip:
+`Em processamento...
+
+Funcionalidade
+disponivel em breve.
+
+0 - Voltar`,
+};
+
+const backMap = {
+  pin:'welcome', pinErro:'pin',
+  menu:'welcome',
+  saldo:'menu', creditos:'menu', recargas:'menu',
+  contas:'menu', pagamentos:'menu', transferencias:'menu', conta:'menu',
+  rec_vodacom:'recargas', rec_tmcel:'recargas', rec_movitel:'recargas',
+  rec_ok:'menu',
+  pag_entref:'pagamentos', pag_servicos:'pagamentos',
+  pag_tvcabo:'pag_servicos', pag_starlink:'pag_servicos',
+  pag_zap:'pag_servicos', pag_dstv:'pag_servicos',
+  pag_ok:'menu', genOk:'menu', genWip:'menu',
+};
+
+function render() {
+  const el = document.getElementById('screenText');
+  el.style.animation='none'; void el.offsetWidth; el.style.animation='';
+  el.textContent = (typeof S[state]==='function' ? S[state]() : S[state]) || '...';
+  document.getElementById('ussdInput').value = '';
+}
+
+function handleSend() {
+  const input = document.getElementById('ussdInput');
+  const val = state === 'pin' ? pinAttempt : input.value.trim();
+
+  if (state === 'welcome' || state === 'goodbye') {
+    state = 'pin'; pinAttempt = ''; render(); return;
+  }
+  if (state === 'pin') {
+    state = pinAttempt === '1234' ? 'menu' : 'pinErro';
+    pinAttempt = ''; render(); return;
+  }
+  if (state === 'pinErro') { state='pin'; pinAttempt=''; render(); return; }
+  if (val === '0') { state = backMap[state]||'menu'; render(); return; }
+
+  if (state === 'menu') {
+    const m={'1':'saldo','2':'creditos','3':'recargas','4':'contas','5':'pagamentos','6':'transferencias','7':'conta','8':'goodbye'};
+    if (m[val]) state=m[val]; render(); return;
+  }
+  if (state === 'recargas') {
+    const m={'1':'rec_vodacom','2':'rec_tmcel','3':'rec_movitel'};
+    if (m[val]) state=m[val]; render(); return;
+  }
+  if (['rec_vodacom','rec_tmcel','rec_movitel'].includes(state)) {
+    if (['1','2','3','4'].includes(val)) { state='rec_ok'; render(); return; }
+  }
+  if (state === 'pagamentos') {
+    if (val==='1'){state='pag_entref'; render(); return;}
+    if (val==='2'){state='pag_servicos'; render(); return;}
+  }
+  if (state === 'pag_entref') { state='pag_ok'; render(); return; }
+  if (state === 'pag_servicos') {
+    const m={'1':'pag_tvcabo','2':'pag_starlink','3':'pag_zap','4':'pag_dstv'};
+    if (m[val]) state=m[val]; render(); return;
+  }
+  if (['pag_tvcabo','pag_starlink','pag_zap','pag_dstv'].includes(state)) {
+    if (['1','2'].includes(val)) { state='pag_ok'; render(); return; }
+  }
+  if (val) { state='genWip'; render(); return; }
+  render();
+}
+
+function handleBack() {
+  if (state==='pin') { state='welcome'; pinAttempt=''; }
+  else { state=backMap[state]||'menu'; }
+  render();
+}
+
+function handleExit() { state='goodbye'; pinAttempt=''; render(); }
+
+function pressKey(k) {
+  const input = document.getElementById('ussdInput');
+  if (k==='del') {
+    if (state==='pin') { pinAttempt=pinAttempt.slice(0,-1); render(); }
+    else input.value=input.value.slice(0,-1);
+    return;
+  }
+  if (state==='pin') {
+    if (pinAttempt.length<4) {
+      pinAttempt+=k; render();
+      if (pinAttempt.length===4) setTimeout(handleSend,350);
+    }
+    return;
+  }
+  input.value+=k;
+}
+
+document.addEventListener('keydown', e=>{
+  if (e.key==='Enter'){handleSend();return;}
+  if (e.key==='Backspace'&&state==='pin'){pressKey('del');return;}
+  if (/^[0-9]$/.test(e.key)&&state==='pin'){pressKey(e.key);return;}
+});
+
+render();
+</script>
+</body>
+</html>
